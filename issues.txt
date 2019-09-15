@@ -3,11 +3,11 @@
 <_-_-_- Completed -_-_-_->
 
 #1 (Multi Client) enable multiple clients to connect to the server and send, and recieve info.
+#2 (Parse) Make it possible to parse requests
 
 
 <_-_-_- In Progress -_-_-_->
 
-#2 (Parse) Make it possible to parse requests
 #3 (Sort) sort requests by HTTP version.
 #4 (Respond) implement an HTTP response generator that works for version 1.0 / 1.1.
 #5 (Test) Create the template directory, give it a simple web page to load.
