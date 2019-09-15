@@ -108,11 +108,12 @@ else:
     print("Didn't work")
 
 while True:
+    # Takes care of multiple connections at once by making them show in the read array
+    # once they are readable.
     read, write, err = select.select(reading,writing,reading)# Monitor inputs.
     for opened in read:
         if not (opened is s):
             # A client is sending data
-            # Later we will want to parse the buffered read, and generate a response.
             print("Waiting to read!")
             read = buffered_read(opened)
             if read:
