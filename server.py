@@ -21,7 +21,7 @@ def buffered_read(sock):
     return buff
 
 while True:
-    read, write, err = select.select(reading,writing,reading)
+    read, write, err = select.select(reading,writing,reading)# Monitor inputs.
     for opened in read:
         if not (opened is s):
             # A client is sending data
@@ -31,8 +31,9 @@ while True:
             if read:
                 print("Read something!")
                 print("Read from the client: ",read)
-                outgoing[opened].put(read)# This echos
+                outgoing[opened].put(read)# This echos, put generated response here.
                 if not (opened in writing): 
+                    # Add to the list of clients who we can respond to.
                     writing.append(opened)
             else:
                 print("Didn't read anything!")
@@ -51,5 +52,8 @@ while True:
             print(f"Connection from {address} has been established.")
             reading.append(clientSocket);   #Add the client socket for later reading.
     for writeable in write:
-        outgoing[writeable]
+        try:
+            writeable.send((outgoing[writeable].get_nowait()).encode("utf-8"))
+        except queue.Empty:
+            writing.remove(writeable)
 
