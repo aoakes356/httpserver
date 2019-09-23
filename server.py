@@ -6,13 +6,15 @@ import sys
 import os.path
 import re
 
+PORT = 8000
+
+
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)   #IPv4, TCP 
-s.bind(('localhost',8000))
+s.bind(('localhost',PORT))
 s.listen(500)
 reading = [s]
 writing = []
 outgoing = {}   # dictionary of queues, mapped to by their sockets.
-waiting = {}    # dictionary of times mapped to by their sockets.
 def buffered_read(sock):
     buff = ""
     delta = "ayy"
@@ -115,20 +117,26 @@ class HTTP_Request():
         status_line = ""
         try:
             if(self.valid):
-                if(self.reqType == "text/html"):
-                    f = open(self.req,'r')
-                    self.data = (f.read()).encode("utf-8")
-                    f.close()
-                    status_line = self.proto+"/"+self.protov+" "+"200 OK\r\n"
-                    status_line = status_line+"Content-Length: "+str(len(self.data))+"\r\n"
-                    status_line = status_line+"Content-Type: "+self.reqType+"; charset=utf8\r\n"
-                elif(self.reqType == "image/jpeg"):
-                    f = open(self.req,'rb')
-                    self.data = (f.read())
-                    f.close()
-                    status_line = self.proto+"/"+self.protov+" "+"200 OK\r\n"
-                    status_line = status_line+"Content-Length: "+str(len(self.data))+"\r\n"
-                    status_line = status_line+"Content-Type: "+self.reqType+"\r\n"
+                if(self.type != "HEAD"):
+
+                    if(self.reqType == "text/html"):
+                        f = open(self.req,'r')
+                        self.data = (f.read()).encode("utf-8")
+                        f.close()
+                        status_line = self.proto+"/"+self.protov+" "+"200 OK\r\n"
+                        status_line = status_line+"Content-Length: "+str(len(self.data))+"\r\n"
+                        status_line = status_line+"Content-Type: "+self.reqType+"; charset=utf8\r\n"
+                    elif(self.reqType == "image/jpeg"):
+                        f = open(self.req,'rb')
+                        self.data = (f.read())
+                        f.close()
+                        status_line = self.proto+"/"+self.protov+" "+"200 OK\r\n"
+                        status_line = status_line+"Content-Length: "+str(len(self.data))+"\r\n"
+                        status_line = status_line+"Content-Type: "+self.reqType+"\r\n"
+                else:   # Head Response
+                    status_line = self.proto+"/"+self.protov+" "+"200 OK\r\n\r\n"
+                    self.data = "<html><body>200 File Exists</body></html>".encode("utf-8")
+
 
             else:
                 status_line = self.proto+"/"+self.protov+" "+"404 Not Found\r\n"
@@ -143,11 +151,12 @@ class HTTP_Request():
             self.data = "<html><body>300 Server Error</body></html>"
             status_line = status_line+"Content-Length: "+str(len(self.data))+"\r\n"
             status_line = status_line+"Cache-Control: no-store\r\n"
-        if(self.protov == "1.0"):
-            status_line = status_line+"Connection: close\r\n\r\n"
-        else:
-            status_line = status_line+"Connection: Keep-Alive\r\n"
-            status_line = status_line+"Keep-Alive: timeout=10, max=10000\r\n\r\n"
+        if(self.type == "GET"):
+            if(self.protov == "1.0"):
+                status_line = status_line+"Connection: close\r\n\r\n"
+            else:
+                status_line = status_line+"Connection: Keep-Alive\r\n"
+                status_line = status_line+"Keep-Alive: timeout=10, max=10000\r\n\r\n"
  
 
         self.response = status_line
