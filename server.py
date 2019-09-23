@@ -57,7 +57,7 @@ def parse_request_string(req_str):
     if(len(parsed) == 3):
         if(is_request_type(parsed[0]) and is_valid_file(convert_file_name(parsed[1])) and is_valid_proto(parsed[2])):
             req.type = parsed[0]
-            req.req = parsed[1]
+            req.req = convert_file_name(parsed[1])
             proto = parsed[2].split("/")
             req.proto = proto[0]
             req.protov = proto[1]
@@ -72,7 +72,7 @@ def parse_request_string(req_str):
         req.valid = False
         return req
 
-    print(str(components))
+    #print(str(components))
     return req
 
 def request_parse_test(): # Unit test for parser
@@ -99,13 +99,38 @@ class HTTP_Request():
         self.protov = "1.1"
         self.headers = []
         self.valid = True
+        self.data = ""
     def generate_response(self):
-        print("Not implemented yet.")
+        #read the data
+        #get its length
+        #generate response headers
+        status_line = ""
+        try:
+            f = open(self.req,'r')
+            self.data = (f.read())
+            f.close()
+            if(self.valid):
+                status_line = self.proto+"/"+self.protov+" "+"200 OK\r\n"
+                status_line = status_line+"Content-Length: "+str(len(self.data))+"\r\n"
+                status_line = status_line+"Content-Type: text/html; charset=utf8\r\n"
+                status_line = status_line+"Connection: close\r\n"
+                status_line = status_line+"Cache-Control: no-store\r\n\r\n"
+                status_line = status_line+self.data
+            else:
+                status_line = self.proto+"/"+self.protov+" "+"404 Not Found\r\n"
+
+
+        except Exception as e:
+            print("Error! "+str(e))
+            status_line = self.proto+"/"+self.protov+" "+"300 Server Error\r\n"
+            
+        self.data = status_line
+        return self.data
         
-if(request_parse_test()):
-    print("Yayy, unit test passed")
-else:
-    print("Didn't work")
+#if(request_parse_test()):
+#    print("Yayy, unit test passed")
+#else:
+#    print("Didn't work")
 
 while True:
     # Takes care of multiple connections at once by making them show in the read array
@@ -120,13 +145,13 @@ while True:
                 req = parse_request_string(read)
                 if(req.valid):
                     print("Received valid request!")
-                    outgoing[opened].put(read)# This echos, put generated response here once implemented.
+                    outgoing[opened].put(req.generate_response())# This echos, put generated response here once implemented.
                 print("Read from the client: ",read)
                 if not (opened in writing): 
                     # Add to the list of clients who we can respond to.
                     writing.append(opened)
             else:
-                print("Didn't read anything!")
+                print("Didn't read anything!, closing client")
                 # Nothing from that client
                 opened.close()    
                 if opened in writing:
@@ -143,7 +168,10 @@ while True:
             reading.append(clientSocket);   #Add the client socket for later reading.
     for writeable in write:
         try:
-            writeable.send((outgoing[writeable].get_nowait()).encode("utf-8"))
+            temp = outgoing[writeable].get_nowait()
+            print("@!@!$!#@#% Sending: \n"+temp+"\n\n\n")
+            writeable.send((temp).encode("utf-8"))
+            #writeable.send('\r\n'.encode("utf-8"))
         except queue.Empty:
             writing.remove(writeable)
 
