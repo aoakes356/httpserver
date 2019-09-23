@@ -62,6 +62,12 @@ def parse_request_string(req_str):
             req.proto = proto[0]
             req.protov = proto[1]
             req.valid = True
+            spliterino = (req.req.split("."))[-1]
+            if(spliterino == "jpg" or spliterino == "img"):
+                req.reqType = "image/jpeg"
+            elif(spliterino == "txt" or spliterino == "html"):
+                req.reqType = "text/html"
+
         else:
             print(is_request_type(parsed[0]) , is_valid_file(convert_file_name(parsed[1])) , is_valid_proto(parsed[2]))
             req.valid = False
@@ -99,33 +105,53 @@ class HTTP_Request():
         self.protov = "1.1"
         self.headers = []
         self.valid = True
-        self.data = ""
+        self.reqType = "text/html"
+        self.response = ""
+        self.data = "".encode("utf-8")
     def generate_response(self):
         #read the data
         #get its length
         #generate response headers
         status_line = ""
         try:
-            f = open(self.req,'r')
-            self.data = (f.read())
-            f.close()
             if(self.valid):
-                status_line = self.proto+"/"+self.protov+" "+"200 OK\r\n"
-                status_line = status_line+"Content-Length: "+str(len(self.data))+"\r\n"
-                status_line = status_line+"Content-Type: text/html; charset=utf8\r\n"
-                status_line = status_line+"Connection: close\r\n"
-                status_line = status_line+"Cache-Control: no-store\r\n\r\n"
-                status_line = status_line+self.data
+                if(self.reqType == "text/html"):
+                    f = open(self.req,'r')
+                    self.data = (f.read()).encode("utf-8")
+                    f.close()
+                    status_line = self.proto+"/"+self.protov+" "+"200 OK\r\n"
+                    status_line = status_line+"Content-Length: "+str(len(self.data))+"\r\n"
+                    status_line = status_line+"Content-Type: "+self.reqType+"; charset=utf8\r\n"
+                elif(self.reqType == "image/jpeg"):
+                    f = open(self.req,'rb')
+                    self.data = (f.read())
+                    f.close()
+                    status_line = self.proto+"/"+self.protov+" "+"200 OK\r\n"
+                    status_line = status_line+"Content-Length: "+str(len(self.data))+"\r\n"
+                    status_line = status_line+"Content-Type: "+self.reqType+"\r\n"
+
             else:
                 status_line = self.proto+"/"+self.protov+" "+"404 Not Found\r\n"
+                status_line = status_line+"Content-Type: text/html\r\n"
+                self.data = "<html><body>404 Not Found</body></html>".encode("utf-8")
 
 
         except Exception as e:
             print("Error! "+str(e))
             status_line = self.proto+"/"+self.protov+" "+"300 Server Error\r\n"
-            
-        self.data = status_line
-        return self.data
+            status_line = status_line+"Content-Type: text/html\r\n"
+            self.data = "<html><body>300 Server Error</body></html>"
+            status_line = status_line+"Content-Length: "+str(len(self.data))+"\r\n"
+            status_line = status_line+"Cache-Control: no-store\r\n"
+        if(self.protov == "1.0"):
+            status_line = status_line+"Connection: close\r\n\r\n"
+        else:
+            status_line = status_line+"Connection: Keep-Alive\r\n"
+            status_line = status_line+"Keep-Alive: timeout=10, max=10000\r\n\r\n"
+ 
+
+        self.response = status_line
+        return self
         
 #if(request_parse_test()):
 #    print("Yayy, unit test passed")
@@ -143,9 +169,7 @@ while True:
             read = buffered_read(opened)
             if read:
                 req = parse_request_string(read)
-                if(req.valid):
-                    print("Received valid request!")
-                    outgoing[opened].put(req.generate_response())# This echos, put generated response here once implemented.
+                outgoing[opened].put(req.generate_response())# This echos, put generated response here once implemented.
                 print("Read from the client: ",read)
                 if not (opened in writing): 
                     # Add to the list of clients who we can respond to.
@@ -168,10 +192,11 @@ while True:
             reading.append(clientSocket);   #Add the client socket for later reading.
     for writeable in write:
         try:
+            if(writeable == -1):
+                raise Exception("oof");
             temp = outgoing[writeable].get_nowait()
-            print("@!@!$!#@#% Sending: \n"+temp+"\n\n\n")
-            writeable.send((temp).encode("utf-8"))
-            #writeable.send('\r\n'.encode("utf-8"))
-        except queue.Empty:
+            writeable.send((temp.response).encode("utf-8"))
+            writeable.send(temp.data)
+        except Exception:
             writing.remove(writeable)
-
+    
