@@ -9,6 +9,7 @@ Made with Python 3.6.8
 to start the server type:
 
     python3 MultiThreadedHttpServer.py
+    (sorry for long name, assignment said to call it that??)
 
 I have it using port 8000, but the constant that is used is at the very top of the file
 
