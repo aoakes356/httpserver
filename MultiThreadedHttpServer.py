@@ -71,6 +71,8 @@ def parse_request_string(req_str):
                 req.reqType = "text/html"
             elif(spliterino == "css"):
                 req.reqType = "text/css"
+            elif(spliterino == "js"):
+                req.reqType = "text/javascript"
 
         else:
             print(is_request_type(parsed[0]) , is_valid_file(convert_file_name(parsed[1])) , is_valid_proto(parsed[2]))
@@ -121,7 +123,7 @@ class HTTP_Request():
             if(self.valid):
                 if(self.type != "HEAD"):
                     print(self.reqType);
-                    if(self.reqType == "text/html" or self.reqType == "text/css"):
+                    if(self.reqType == "text/html" or self.reqType == "text/css" or self.reqType == "text/javascript"):
                         f = open(self.req,'r')
                         self.data = (f.read()).encode("utf-8")
                         f.close()
